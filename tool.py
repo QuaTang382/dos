@@ -1,3 +1,50 @@
+# -*- coding: utf-8 -*-
+# TOOL DDoS SIÊU MẠNH - ĐA METHOD - ĐA MỤC TIÊU - CHỐNG TREO - TỰ LƯU CTRL+C
+# Mục tiêu: t4xcheatgamer.x10.mx (3 URL)
+# Tác giả: palofsc
+# Phiên bản: 5.0 ULTRA MEGA - 50 METHOD TẤN CÔNG
+
+import requests
+import threading
+import queue
+import time
+import random
+import socket
+import ssl
+import sys
+import os
+import re
+import signal
+import urllib3
+import string
+import hashlib
+import json
+import struct
+import select
+import http.client
+import socks
+import dns.resolver
+import ftplib
+import paramiko
+import smtplib
+import websocket
+import asyncio
+import aiohttp
+import certifi
+import OpenSSL
+import scapy.all as scapy
+from scapy.layers.inet import IP, TCP, UDP, ICMP
+from scapy.layers.inet6 import IPv6
+from scapy.layers.http import HTTPRequest
+from concurrent.futures import ThreadPoolExecutor, as_completed, ProcessPoolExecutor
+from urllib.parse import urlparse, urlencode, urljoin
+from http.server import HTTPServer, BaseHTTPRequestHandler
+from socketserver import ThreadingMixIn
+from multiprocessing import Process, Queue as MPQueue, Value, Array, Manager
+from collections import deque, OrderedDict, defaultdict, Counter
+import warnings
+warnings.filterwarnings('ignore')
+urllib3.disable_warnings()
 # ============================================
 # CẤU HÌNH CHUNG - NÂNG CẤP TỐI ĐA
 # ============================================
